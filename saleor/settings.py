@@ -395,3 +395,7 @@ IMPERSONATE = {
     'CUSTOM_USER_QUERYSET': 'saleor.account.impersonate.get_impersonatable_users',  # noqa
     'USE_HTTP_REFERER': True,
     'CUSTOM_ALLOW': 'saleor.account.impersonate.can_impersonate'}
+
+# Demo-specific settings
+# We obfucate emails if they are different than demo's admin email
+DEMO_ADMIN_EMAIL = 'admin@example.com'
