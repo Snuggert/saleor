@@ -5,8 +5,8 @@ from django.urls import reverse
 from templated_email import send_templated_mail
 
 from ..core.utils import build_absolute_uri
-from .models import Order
 from .emails_helpers import get_order_confirmation_markup
+from .models import Order
 
 CONFIRM_ORDER_TEMPLATE = 'source/order/confirm_order'
 CONFIRM_PAYMENT_TEMPLATE = 'source/order/payment/confirm_payment'
