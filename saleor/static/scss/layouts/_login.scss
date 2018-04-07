@@ -16,6 +16,9 @@
     margin-top: $global-margin;
   }
   &__btn-group {
+    button {
+      background-color: $bordeaux !important;
+    }
     text-align: center;
     img {
       display: block;

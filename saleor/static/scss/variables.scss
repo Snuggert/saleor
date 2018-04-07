@@ -2,10 +2,12 @@
 $global-padding: 1rem;
 $global-margin: 1rem;
 $button-border-radius: 4px;
+$fa-font-path: "~font-awesome/fonts";
 
 // COLORS
 $body-color: #333333;
 $white: #fff;
+$black: #000;
 $light-gray: #f2f2f2;
 $gray: #D3D1D0;
 $darken-gray: darken($gray, 10%);
@@ -16,6 +18,7 @@ $red: #EB5757;
 $dark-red: #c53636;
 $green: #27AE60;
 $beige: #FFFAEC;
+$bordeaux: rgb(119, 0, 0);
 
 // TYPOGRAPHY
 $font-family-sans-serif: 'Lato', sans-serif;

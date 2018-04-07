@@ -1,18 +1,21 @@
-from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.sites.models import Site
 from django.db import models
 from django.db.models import Q
+from django.http import HttpResponse, HttpResponseServerError
 from django.urls import reverse
 from django.utils.timezone import now
 from django.utils.translation import pgettext_lazy
 from django_fsm import FSMField, transition
 from django_prices.models import MoneyField, TaxedMoneyField
-from payments import PaymentStatus, PurchasedItem
+from payments import PaymentStatus, PaymentError, PurchasedItem, RedirectNeeded
 from payments.models import BasePayment
+from payments.core import BasicProvider
 from prices import Money, TaxedMoney
+from decimal import Decimal, ROUND_HALF_UP
 
 from . import GroupStatus, OrderStatus
 from ..account.models import Address
@@ -21,6 +24,9 @@ from ..discount.models import Voucher
 from ..product.models import Product
 from .transitions import (
     cancel_delivery_group, process_delivery_group, ship_delivery_group)
+
+import Mollie
+CENTS = Decimal('0.01')
 
 
 class OrderQuerySet(models.QuerySet):
@@ -273,6 +279,89 @@ class PaymentQuerySet(models.QuerySet):
         return None
 
 
+class MollieProvider(BasicProvider):
+    '''
+    mollie.com payment provider
+    '''
+    def __init__(self, api_key='test_bt7vvByF6jTcBR4dLuW66eNnHYNIJp', **kwargs):
+        self.mollie = Mollie.API.Client()
+        self.mollie.setApiKey(api_key)
+
+        super(MollieProvider, self).__init__(**kwargs)
+
+    '''
+    This class defines the provider API. It should not be instantiated
+    directly. Use factory instead.
+    '''
+    _method = 'post'
+
+    def create_payment(self, payment, extra_data=None):
+        product_data = self.get_product_data(payment, extra_data)
+        mollie_payment = self.mollie.payments.create(product_data)
+        return mollie_payment
+
+    def get_form(self, payment, data=None):
+        if not payment.id:
+            payment.save()
+        mollie_payment = self.create_payment(payment)
+        if mollie_payment.isOpen():
+            payment.change_status(PaymentStatus.WAITING)
+        else:
+            payment.change_status(PaymentStatus.ERROR)
+            raise PaymentError('Mollie error')
+        payment.mollie_id = mollie_payment['id']
+        mollie_redirect = mollie_payment.getPaymentUrl()
+        raise RedirectNeeded(mollie_redirect)
+
+    def get_product_data(self, payment, extra_data=None):
+        success_url = payment.get_success_url()
+        process_url = payment.get_process_url()
+        data = self.get_transactions_data(payment)
+        data['redirectUrl'] = success_url
+        data['webhookUrl'] = process_url
+        print("BIGTEXXTTTT", str(success_url), str(process_url))
+        return data
+
+    def get_transactions_data(self, payment):
+        total = payment.total.quantize(CENTS, rounding=ROUND_HALF_UP)
+        name = Site.objects.get_current().name
+        description = name + " - Order: #" + str(payment.order.id)
+        data = {
+            'amount': str(total),
+            'description': description
+        }
+        return data
+
+    def process_data(self, payment, request):
+        if request.method == "POST":
+            if not ('id' in request.POST):
+                return HttpResponseServerError('FAILED')
+        mollie_payment_id = request.POST.get('id')
+        mollie_payment = self.mollie.payments.get(mollie_payment_id)
+        if mollie_payment.isPaid():
+            payment.captured_amount = mollie_payment['amount']
+            payment.change_status(PaymentStatus.CONFIRMED)
+        elif mollie_payment.isPending():
+            return HttpResponse()
+        elif mollie_payment.isOpen():
+            return HttpResponse()
+        elif mollie_payment.isFailed():
+            payment.change_status(PaymentStatus.ERROR)
+        elif mollie_payment.isCancelled() or mollie_payment.isExpired():
+            payment.change_status(PaymentStatus.REJECTED)
+        elif mollie_payment.isRefunded():
+            payment.change_status(PaymentStatus.REFUNDED)
+        return HttpResponse()
+
+    def refund(self, payment, amount=None):
+        if amount is None:
+            amount = payment.captured_amount
+        data = {'amount': amount}
+        mollie_refund = self.mollie.payments.refund(payment.mollie_id,
+                                                    data=data)
+        return mollie_refund['amount']
+
+
 class Payment(BasePayment):
     order = models.ForeignKey(
         Order, related_name='payments', on_delete=models.PROTECT)
@@ -281,6 +370,9 @@ class Payment(BasePayment):
 
     class Meta:
         ordering = ('-pk',)
+
+    def get_process_url(self):
+        return build_absolute_uri(super().get_process_url())
 
     def get_failure_url(self):
         return build_absolute_uri(

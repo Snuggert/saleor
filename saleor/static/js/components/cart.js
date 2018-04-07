@@ -3,6 +3,7 @@ import {getAjaxError} from './misc';
 export const summaryLink = $('html').data('cart-summary-url');
 export const $cartDropdown = $('.cart-dropdown');
 export const $cartIcon = $('.cart__icon');
+export const $cartBadge = $('.navbar__brand__cart .badge');
 export const $addToCartError = $('.product__info__form-error small');
 export const $removeProductSuccess = $('.remove-product-alert');
 
@@ -34,9 +35,11 @@ export default $(document).ready((e) => {
   $('.navbar__brand__cart').hover((e) => {
     $cartDropdown.addClass('show');
     $cartIcon.addClass('hover');
+    $cartBadge.addClass('hover');
   }, (e) => {
     $cartDropdown.removeClass('show');
     $cartIcon.removeClass('hover');
+    $cartBadge.removeClass('hover');
   });
   $('.product-form button').click((e) => {
     e.preventDefault();
@@ -62,7 +65,6 @@ export default $(document).ready((e) => {
 
   let $cartLine = $('.cart__line');
   let $total = $('.cart-subtotal');
-  let $cartBadge = $('.navbar__brand__cart .badge');
   let $closeMsg = $('.close-msg');
   $closeMsg.on('click', (e) => {
     $removeProductSuccess.addClass('d-none');

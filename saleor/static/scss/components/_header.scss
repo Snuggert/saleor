@@ -91,7 +91,7 @@
       }
     }
     svg path {
-      fill: $body-color;
+      fill: $white;
     }
   }
   &__search {
@@ -111,7 +111,7 @@
     }
   }
   &__brand {
-    background-color: $light-gray;
+    background-color: $bordeaux;
     @include media-breakpoint-down(sm) {
       position: fixed;
       top: 0;
@@ -129,7 +129,7 @@
         line-height: 2.4rem;
       }
       .cart__icon {
-        color: $body-color;
+        color: $white;
         display: block;
         border: solid 1px transparent;
         border-radius: 4px 4px 0 0;
@@ -143,6 +143,7 @@
           padding: 2rem 1rem 2rem 0;
         }
         &.hover {
+          color: $body-color;
           text-decoration: none;
           background: $white;
           border-top: solid 1px $gray;
@@ -172,9 +173,9 @@
           position: absolute;
           right: 20px;
           top: 20px;
-          background-color: $blue;
+          background-color: $white;
           border-radius: 100px;
-          color: $white;
+          color: $body-color;
           width: 30px;
           height: 30px;
           text-align: center;
@@ -184,6 +185,10 @@
           }
           @include media-breakpoint-down(sm) {
             right: 0;
+          }
+          &.hover {
+            background-color: $bordeaux;
+            color: $white;
           }
         }
       }
