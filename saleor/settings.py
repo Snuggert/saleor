@@ -506,3 +506,10 @@ NOCAPTCHA = True
 # Set Google's reCaptcha keys
 RECAPTCHA_PUBLIC_KEY = os.environ.get('RECAPTCHA_PUBLIC_KEY')
 RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_PRIVATE_KEY')
+
+#  Sentry
+RAVEN_DSN = os.environ.get('RAVEN_DSN')
+if RAVEN_DSN:
+    RAVEN_CONFIG = {
+        'dsn': RAVEN_DSN,
+        'release': __version__}
