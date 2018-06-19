@@ -24,7 +24,8 @@ def get_bool_from_env(name, default_value):
     return default_value
 
 
-DEBUG = get_bool_from_env('DEBUG', True)
+# DEBUG = get_bool_from_env('DEBUG', True)
+DEBUG = True
 
 SITE_ID = 1
 
@@ -34,7 +35,9 @@ ROOT_URLCONF = 'saleor.urls'
 
 WSGI_APPLICATION = 'saleor.wsgi.application'
 
+SECRET_KEY = 'NereusWintDeVarsity'
 ADMINS = (
+    ('Abe Wiersma', 'contact@nereus-merchandise.nl')
     # ('Your Name', 'your_email@example.com'),
 )
 MANAGERS = ADMINS
@@ -49,12 +52,12 @@ CACHES = {'default': django_cache_url.config()}
 
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgres://saleor:saleor@localhost:5432/saleor',
+        default='postgres://postgres:NereusWintDeVarsity1885@postgres_db_1:5432/nereus',
         conn_max_age=600)}
 
 
-TIME_ZONE = 'America/Chicago'
-LANGUAGE_CODE = 'en'
+TIME_ZONE = 'Europe/Amsterdam'
+LANGUAGE_CODE = 'nl'
 LANGUAGES = [
     ('bg', _('Bulgarian')),
     ('de', _('German')),
@@ -84,7 +87,8 @@ USE_TZ = True
 
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
-EMAIL_URL = os.environ.get('EMAIL_URL')
+# EMAIL_URL = os.environ.get('EMAIL_URL')
+EMAIL_URL = 'smtp://contact@nereus-merchandise.nl:NereusWintDeVarsity1885@smtp.transip.email:465/?ssl=True'
 SENDGRID_USERNAME = os.environ.get('SENDGRID_USERNAME')
 SENDGRID_PASSWORD = os.environ.get('SENDGRID_PASSWORD')
 if not EMAIL_URL and SENDGRID_USERNAME and SENDGRID_PASSWORD:
@@ -101,12 +105,15 @@ EMAIL_BACKEND = email_config['EMAIL_BACKEND']
 EMAIL_USE_TLS = email_config['EMAIL_USE_TLS']
 EMAIL_USE_SSL = email_config['EMAIL_USE_SSL']
 
-ENABLE_SSL = get_bool_from_env('ENABLE_SSL', False)
+# ENABLE_SSL = ast.literal_eval(
+#     os.environ.get('ENABLE_SSL', 'False'))
+ENABLE_SSL = True
 
 if ENABLE_SSL:
     SECURE_SSL_REDIRECT = not DEBUG
 
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
+# DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
+DEFAULT_FROM_EMAIL = 'contact@nereus-merchandise.nl'
 ORDER_FROM_EMAIL = os.getenv('ORDER_FROM_EMAIL', DEFAULT_FROM_EMAIL)
 
 MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'media')
@@ -157,7 +164,7 @@ TEMPLATES = [{
         'string_if_invalid': '<< MISSING VARIABLE "%s" >>' if DEBUG else ''}}]
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = os.environ.get('SECRET_KEY')
+# SECRET_KEY = os.environ.get('SECRET_KEY')
 
 MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -282,8 +289,9 @@ AUTH_USER_MODEL = 'account.User'
 
 LOGIN_URL = '/account/login/'
 
-DEFAULT_COUNTRY = 'US'
-DEFAULT_CURRENCY = 'USD'
+DEFAULT_COUNTRY = 'NL'
+DEFAULT_CURRENCY = 'EUR'
+
 DEFAULT_DECIMAL_PLACES = get_currency_fraction(DEFAULT_CURRENCY)
 AVAILABLE_CURRENCIES = [DEFAULT_CURRENCY]
 
@@ -310,13 +318,14 @@ PAYMENT_HOST = get_host
 PAYMENT_MODEL = 'order.Payment'
 
 PAYMENT_VARIANTS = {
-    'default': ('payments.dummy.DummyProvider', {})}
+    'paypal': ('saleor.order.models.MollieProvider', {
+        'api_key': 'live_rqKrBbMcttHr3dnDzbKvNxQ5rB4qw8'})}
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 CHECKOUT_PAYMENT_CHOICES = [
-    ('default', 'Dummy provider')]
+    ('paypal', 'Mollie Payments')]
 
 MESSAGE_TAGS = {
     messages.ERROR: 'danger'}
@@ -337,7 +346,9 @@ bootstrap4 = {
 
 TEST_RUNNER = ''
 
-ALLOWED_HOSTS = get_list(os.environ.get('ALLOWED_HOSTS', 'localhost'))
+# ALLOWED_HOSTS = get_list(os.environ.get('ALLOWED_HOSTS', 'localhost'))
+ALLOWED_HOSTS = ['localhost', 'nereus-merchandise.nl',
+                 'www.nereus-merchandise.nl']
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -372,6 +383,7 @@ VERSATILEIMAGEFIELD_SETTINGS = {
     # Images should be pre-generated on Production environment
     'create_images_on_demand': get_bool_from_env(
         'CREATE_IMAGES_ON_DEMAND', DEBUG),
+    # 'create_images_on_demand': True
 }
 
 PLACEHOLDER_IMAGES = {

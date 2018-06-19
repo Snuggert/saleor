@@ -15,4 +15,4 @@ WORKDIR /app
 EXPOSE 8000
 ENV PORT 8000
 
-CMD ["uwsgi", "/app/saleor/wsgi/uwsgi.ini"]
+# CMD ["uwsgi", "/app/saleor/wsgi/uwsgi.ini"]
