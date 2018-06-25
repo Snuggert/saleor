@@ -60,6 +60,7 @@ TIME_ZONE = 'Europe/Amsterdam'
 LANGUAGE_CODE = 'nl'
 LANGUAGES = [
     ('bg', _('Bulgarian')),
+    ('cs', _('Czech')),
     ('de', _('German')),
     ('en', _('English')),
     ('es', _('Spanish')),
