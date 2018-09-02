@@ -13,6 +13,7 @@ from mptt.forms import TreeNodeChoiceField
 from . import ProductBulkAction
 from ...core.i18n import VAT_RATE_TYPE_TRANSLATIONS
 from ...core.utils.taxes import DEFAULT_TAX_RATE_NAME, include_taxes_in_prices
+from ...core.weight import WeightField, get_default_weight_unit
 from ...product.models import (
     AttributeChoiceValue, Category, Collection, Product, ProductAttribute,
     ProductImage, ProductType, ProductVariant, VariantImage)
@@ -65,7 +66,15 @@ def get_tax_rate_type_choices():
 
 
 class ProductTypeForm(forms.ModelForm):
-    tax_rate = forms.ChoiceField(required=False)
+    tax_rate = forms.ChoiceField(
+        required=False,
+        label=pgettext_lazy('Product type tax rate type', 'Tax rate'))
+    weight = WeightField(
+        label=pgettext_lazy('ProductType weight', 'Weight'),
+        help_text=pgettext_lazy(
+            'ProductVariant weight help text',
+            'Default weight that will be used for calculating shipping'
+            ' price for products of that type.'))
 
     class Meta:
         model = ProductType
@@ -85,9 +94,7 @@ class ProductTypeForm(forms.ModelForm):
                 'Attributes common to all variants'),
             'is_shipping_required': pgettext_lazy(
                 'Shipping toggle',
-                'Require shipping'),
-            'tax_rate': pgettext_lazy(
-                'Product type tax rate type', 'Tax rate')}
+                'Require shipping')}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -129,8 +136,9 @@ class ProductTypeForm(forms.ModelForm):
             product__product_type__variant_attributes__in=attributes_changed)
         variants_to_be_updated = variants_to_be_updated.prefetch_related(
             'product__product_type__variant_attributes__values').all()
+        attributes = self.instance.variant_attributes.all()
         for variant in variants_to_be_updated:
-            variant.name = get_name_from_attributes(variant)
+            variant.name = get_name_from_attributes(variant, attributes)
             variant.save()
 
     def check_if_variants_changed(self, has_variants):
@@ -195,38 +203,39 @@ class AttributesMixin(object):
 
 
 class ProductForm(forms.ModelForm, AttributesMixin):
-    tax_rate = forms.ChoiceField(required=False)
+    tax_rate = forms.ChoiceField(
+        required=False,
+        label=pgettext_lazy('Product tax rate type', 'Tax rate'))
+
+    category = TreeNodeChoiceField(
+        queryset=Category.objects.all(),
+        label=pgettext_lazy('Category', 'Category'))
+    collections = forms.ModelMultipleChoiceField(
+        required=False, queryset=Collection.objects.all(),
+        label=pgettext_lazy('Add to collection select', 'Collections'))
+    description = RichTextField(
+        label=pgettext_lazy('Description', 'Description'))
+    weight = WeightField(
+        required=False, label=pgettext_lazy('ProductType weight', 'Weight'),
+        help_text=pgettext_lazy(
+            'Product weight field help text',
+            'Weight will be used to calculate shipping price, '
+            'if empty, equal to default value used on the ProductType.'))
+
+    model_attributes_field = 'attributes'
 
     class Meta:
         model = Product
         exclude = ['attributes', 'product_type', 'updated_at']
         labels = {
             'name': pgettext_lazy('Item name', 'Name'),
-            'description': pgettext_lazy('Description', 'Description'),
-            'seo_description': pgettext_lazy(
-                'A SEO friendly description', 'SEO Friendly Description'),
-            'category': pgettext_lazy('Category', 'Category'),
             'price': pgettext_lazy('Currency amount', 'Price'),
             'available_on': pgettext_lazy(
                 'Availability date', 'Publish product on'),
             'is_published': pgettext_lazy(
                 'Product published toggle', 'Published'),
-            'is_featured': pgettext_lazy(
-                'Featured product toggle',
-                'Feature this product on homepage'),
-            'collections': pgettext_lazy(
-                'Add to collection select', 'Collections'),
             'charge_taxes': pgettext_lazy(
-                'Charge taxes on product', 'Charge taxes on this product'),
-            'tax_rate': pgettext_lazy(
-                'Product tax rate type', 'Tax rate')}
-
-    category = TreeNodeChoiceField(queryset=Category.objects.all())
-    collections = forms.ModelMultipleChoiceField(
-        required=False, queryset=Collection.objects.all())
-    description = RichTextField()
-
-    model_attributes_field = 'attributes'
+                'Charge taxes on product', 'Charge taxes on this product')}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -251,6 +260,12 @@ class ProductForm(forms.ModelForm, AttributesMixin):
             self.fields['price'].label = pgettext_lazy(
                 'Currency net amount', 'Net price')
 
+        if not product_type.is_shipping_required:
+            del self.fields['weight']
+        else:
+            self.fields['weight'].widget.attrs['placeholder'] = (
+                product_type.weight.value)
+
     def clean_seo_description(self):
         seo_description = prepare_seo_description(
             seo_description=self.cleaned_data['seo_description'],
@@ -270,11 +285,17 @@ class ProductForm(forms.ModelForm, AttributesMixin):
 
 class ProductVariantForm(forms.ModelForm, AttributesMixin):
     model_attributes_field = 'attributes'
+    weight = WeightField(
+        required=False, label=pgettext_lazy('ProductVariant weight', 'Weight'),
+        help_text=pgettext_lazy(
+            'ProductVariant weight help text',
+            'Weight will be used to calculate shipping price. '
+            'If empty, weight from Product or ProductType will be used.'))
 
     class Meta:
         model = ProductVariant
         fields = [
-            'sku', 'price_override',
+            'sku', 'price_override', 'weight',
             'quantity', 'cost_price', 'track_inventory']
         labels = {
             'sku': pgettext_lazy('SKU', 'SKU'),
@@ -289,10 +310,8 @@ class ProductVariantForm(forms.ModelForm, AttributesMixin):
                 'product variant handle stock field help text',
                 'Automatically track this product\'s inventory')}
 
-    def __init__(self, *args, initial_track_inventory=True, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.initial['track_inventory'] = initial_track_inventory
 
         if self.instance.product.pk:
             self.fields['price_override'].widget.attrs[
@@ -313,10 +332,18 @@ class ProductVariantForm(forms.ModelForm, AttributesMixin):
             self.fields['cost_price'].label = pgettext_lazy(
                 'Currency amount', 'Cost net price')
 
+        if not self.instance.product.product_type.is_shipping_required:
+            del self.fields['weight']
+        else:
+            self.fields['weight'].widget.attrs['placeholder'] = (
+                getattr(self.instance.product.weight, 'value', None) or
+                self.instance.product.product_type.weight.value)
+
     def save(self, commit=True):
         attributes = self.get_saved_attributes()
         self.instance.attributes = attributes
-        self.instance.name = get_name_from_attributes(self.instance)
+        attrs = self.instance.product.product_type.variant_attributes.all()
+        self.instance.name = get_name_from_attributes(self.instance, attrs)
         return super().save(commit=commit)
 
 

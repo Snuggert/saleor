@@ -5,8 +5,10 @@ import dj_database_url
 import dj_email_url
 import django_cache_url
 from django.contrib.messages import constants as messages
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, pgettext_lazy
 from django_prices.templatetags.prices_i18n import get_currency_fraction
+
+from . import __version__
 
 
 def get_list(text):
@@ -35,7 +37,7 @@ ROOT_URLCONF = 'saleor.urls'
 
 WSGI_APPLICATION = 'saleor.wsgi.application'
 
-SECRET_KEY = 'NereusWintDeVarsity'
+SECRET_KEY = 'TEMP'
 ADMINS = (
     ('Abe Wiersma', 'contact@nereus-merchandise.nl')
     # ('Your Name', 'your_email@example.com'),
@@ -52,7 +54,7 @@ CACHES = {'default': django_cache_url.config()}
 
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgres://postgres:NereusWintDeVarsity1885@postgres_db_1:5432/nereus',
+        default='postgres://postgres:postgres@localhost:5432/postgres',
         conn_max_age=600)}
 
 
@@ -80,7 +82,8 @@ LANGUAGES = [
     ('tr', _('Turkish')),
     ('uk', _('Ukrainian')),
     ('vi', _('Vietnamese')),
-    ('zh-hans', _('Chinese'))]
+    ('zh-hans', _('Chinese')),
+    ('zh-tw', _('Chinese (Taiwan)'))]
 LOCALE_PATHS = [os.path.join(PROJECT_ROOT, 'locale')]
 USE_I18N = True
 USE_L10N = True
@@ -89,7 +92,7 @@ USE_TZ = True
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 # EMAIL_URL = os.environ.get('EMAIL_URL')
-EMAIL_URL = 'smtp://contact@nereus-merchandise.nl:NereusWintDeVarsity1885@smtp.transip.email:465/?ssl=True'
+EMAIL_URL = 'smtp://smtp:smtp@smtp.smtp:465/?ssl=True'
 SENDGRID_USERNAME = os.environ.get('SENDGRID_USERNAME')
 SENDGRID_PASSWORD = os.environ.get('SENDGRID_PASSWORD')
 if not EMAIL_URL and SENDGRID_USERNAME and SENDGRID_PASSWORD:
@@ -118,10 +121,10 @@ DEFAULT_FROM_EMAIL = 'contact@nereus-merchandise.nl'
 ORDER_FROM_EMAIL = os.getenv('ORDER_FROM_EMAIL', DEFAULT_FROM_EMAIL)
 
 MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'media')
-MEDIA_URL = '/media/'
+MEDIA_URL = os.environ.get('MEDIA_URL', '/media/')
 
 STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
-STATIC_URL = '/static/'
+STATIC_URL = os.environ.get('STATIC_URL', '/static/')
 STATICFILES_DIRS = [
     ('assets', os.path.join(PROJECT_ROOT, 'saleor', 'static', 'assets')),
     ('favicons', os.path.join(PROJECT_ROOT, 'saleor', 'static', 'favicons')),
@@ -142,7 +145,6 @@ context_processors = [
     'django.template.context_processors.request',
     'saleor.core.context_processors.default_currency',
     'saleor.checkout.context_processors.cart_counter',
-    'saleor.core.context_processors.navigation',
     'saleor.core.context_processors.search_enabled',
     'saleor.site.context_processors.site',
     'social_django.context_processors.backends',
@@ -176,7 +178,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django_babel.middleware.LocaleMiddleware',
-    'graphql_jwt.middleware.JSONWebTokenMiddleware',
     'saleor.core.middleware.discounts',
     'saleor.core.middleware.google_analytics',
     'saleor.core.middleware.country',
@@ -184,7 +185,9 @@ MIDDLEWARE = [
     'saleor.core.middleware.site',
     'saleor.core.middleware.taxes',
     'social_django.middleware.SocialAuthExceptionMiddleware',
-    'impersonate.middleware.ImpersonateMiddleware']
+    'impersonate.middleware.ImpersonateMiddleware',
+    'saleor.graphql.middleware.jwt_middleware'
+]
 
 INSTALLED_APPS = [
     # External apps that need to go before django's
@@ -222,6 +225,7 @@ INSTALLED_APPS = [
     'versatileimagefield',
     'django_babel',
     'bootstrap4',
+    'django_measurement',
     'django_prices',
     'django_prices_openexchangerates',
     'django_prices_vatlayer',
@@ -241,6 +245,26 @@ if DEBUG:
     MIDDLEWARE.append(
         'debug_toolbar.middleware.DebugToolbarMiddleware')
     INSTALLED_APPS.append('debug_toolbar')
+    DEBUG_TOOLBAR_PANELS = [
+        # adds a request history to the debug toolbar
+        'ddt_request_history.panels.request_history.RequestHistoryPanel',
+
+        'debug_toolbar.panels.versions.VersionsPanel',
+        'debug_toolbar.panels.timer.TimerPanel',
+        'debug_toolbar.panels.settings.SettingsPanel',
+        'debug_toolbar.panels.headers.HeadersPanel',
+        'debug_toolbar.panels.request.RequestPanel',
+        'debug_toolbar.panels.sql.SQLPanel',
+        'debug_toolbar.panels.templates.TemplatesPanel',
+        'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+        'debug_toolbar.panels.cache.CachePanel',
+        'debug_toolbar.panels.signals.SignalsPanel',
+        'debug_toolbar.panels.logging.LoggingPanel',
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+        'debug_toolbar.panels.profiling.ProfilingPanel',
+    ]
+    DEBUG_TOOLBAR_CONFIG = {
+        'RESULTS_STORE_SIZE': 100}
 
 ENABLE_SILK = get_bool_from_env('ENABLE_SILK', False)
 if ENABLE_SILK:
@@ -295,6 +319,10 @@ DEFAULT_CURRENCY = 'EUR'
 
 DEFAULT_DECIMAL_PLACES = get_currency_fraction(DEFAULT_CURRENCY)
 AVAILABLE_CURRENCIES = [DEFAULT_CURRENCY]
+COUNTRIES_OVERRIDE = {
+    'EU': pgettext_lazy(
+        'Name of political and economical union of european countries',
+        'European Union')}
 
 OPENEXCHANGERATES_API_KEY = os.environ.get('OPENEXCHANGERATES_API_KEY')
 
@@ -323,7 +351,11 @@ PAYMENT_VARIANTS = {
         'api_key': 'live_rqKrBbMcttHr3dnDzbKvNxQ5rB4qw8'})}
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+
+# Do not use cached session if locmem cache backend is used but fallback to use
+# default django.contrib.sessions.backends.db instead
+if not CACHES['default']['BACKEND'].endswith('LocMemCache'):
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 CHECKOUT_PAYMENT_CHOICES = [
     ('paypal', 'Mollie Payments')]
@@ -354,13 +386,14 @@ ALLOWED_HOSTS = ['localhost', 'nereus-merchandise.nl',
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Amazon S3 configuration
-AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_STATIC_CUSTOM_DOMAIN')
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_LOCATION = os.environ.get('AWS_LOCATION', '')
 AWS_MEDIA_BUCKET_NAME = os.environ.get('AWS_MEDIA_BUCKET_NAME')
 AWS_MEDIA_CUSTOM_DOMAIN = os.environ.get('AWS_MEDIA_CUSTOM_DOMAIN')
 AWS_QUERYSTRING_AUTH = get_bool_from_env('AWS_QUERYSTRING_AUTH', False)
+AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_STATIC_CUSTOM_DOMAIN')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
 
 if AWS_STORAGE_BUCKET_NAME:
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
@@ -427,9 +460,6 @@ if ES_URL:
         'default': {
             'hosts': ES_URL}}
 
-
-GRAPHENE = {'MIDDLEWARE': ['graphene_django.debug.DjangoDebugMiddleware']}
-
 AUTHENTICATION_BACKENDS = [
     'saleor.account.backends.facebook.CustomFacebookOAuth2',
     'saleor.account.backends.google.CustomGoogleOAuth2',
@@ -456,7 +486,8 @@ SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
 # CELERY SETTINGS
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or ''
+CELERY_BROKER_URL = os.environ.get(
+    'CELERY_BROKER_URL', os.environ.get('CLOUDAMQP_URL')) or ''
 CELERY_TASK_ALWAYS_EAGER = False if CELERY_BROKER_URL else True
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -508,9 +539,15 @@ NOCAPTCHA = True
 RECAPTCHA_PUBLIC_KEY = os.environ.get('RECAPTCHA_PUBLIC_KEY')
 RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_PRIVATE_KEY')
 
+
 #  Sentry
 SENTRY_DSN = os.environ.get('SENTRY_DSN')
 if SENTRY_DSN:
+    INSTALLED_APPS.append('raven.contrib.django.raven_compat')
     RAVEN_CONFIG = {
         'dsn': SENTRY_DSN,
         'release': __version__}
+
+
+SERIALIZATION_MODULES = {
+    'json': 'saleor.core.utils.json_serializer'}
