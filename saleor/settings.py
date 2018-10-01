@@ -37,7 +37,7 @@ ROOT_URLCONF = 'saleor.urls'
 
 WSGI_APPLICATION = 'saleor.wsgi.application'
 
-SECRET_KEY = 'TEMP'
+SECRET_KEY = 'NereusWintDeVarsity'
 ADMINS = (
     ('Abe Wiersma', 'contact@nereus-merchandise.nl')
     # ('Your Name', 'your_email@example.com'),
@@ -54,7 +54,7 @@ CACHES = {'default': django_cache_url.config()}
 
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgres://postgres:postgres@localhost:5432/postgres',
+        default='postgres://postgres:NereusWintDeVarsity1885@postgres_db_1:5432/nereus',
         conn_max_age=600)}
 
 
@@ -92,7 +92,7 @@ USE_TZ = True
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 # EMAIL_URL = os.environ.get('EMAIL_URL')
-EMAIL_URL = 'smtp://smtp:smtp@smtp.smtp:465/?ssl=True'
+EMAIL_URL = 'smtp://contact@nereus-merchandise.nl:NereusWintDeVarsity1885@smtp.transip.email:465/?ssl=True'
 SENDGRID_USERNAME = os.environ.get('SENDGRID_USERNAME')
 SENDGRID_PASSWORD = os.environ.get('SENDGRID_PASSWORD')
 if not EMAIL_URL and SENDGRID_USERNAME and SENDGRID_PASSWORD:
