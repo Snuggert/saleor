@@ -58,6 +58,10 @@ h6 {
   &.label-success {
     @extend .green-text;
   }
+
+  &.label-warning {
+    @extend .orange-text;
+  }
 }
 
 .material-icons {

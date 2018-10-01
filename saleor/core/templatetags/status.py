@@ -17,6 +17,7 @@ SUCCESSES = {PaymentStatus.CONFIRMED, PaymentStatus.REFUNDED}
 
 LABEL_DANGER = 'danger'
 LABEL_SUCCESS = 'success'
+LABEL_WARNING = 'warning'
 LABEL_DEFAULT = 'default'
 
 
@@ -35,6 +36,11 @@ def render_status(status, status_display=None):
 def render_order_status(status, status_display=None):
     if status == OrderStatus.FULFILLED:
         label_cls = LABEL_SUCCESS
+    elif status == OrderStatus.CANCELED:
+        label_cls = LABEL_DANGER
+    elif (status == OrderStatus.UNFULFILLED or
+          status == OrderStatus.PARTIALLY_FULFILLED):
+        label_cls = LABEL_WARNING
     else:
         label_cls = LABEL_DEFAULT
     return {'label_cls': label_cls, 'status': status_display or status}

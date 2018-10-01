@@ -13,6 +13,11 @@
       background-color: $green;
     }
   }
+  &-warning {
+    &:before {
+      background-color: $orange;
+    }
+  }
   &-danger {
     &:before {
       background-color: $red;

@@ -41,7 +41,7 @@
                 <tr>
                   {% sorting_header 'pk' '#' %}
 
-                  <th></th>
+                  <th>{% trans "Order status" context "Orders table header" %}</th>
 
                   {% trans "Customer" context "Orders table header" as label %}
                   {% sorting_header 'email' label %}
@@ -67,7 +67,10 @@
                     </td>
                     {% trans "Guest" context "Anonymous user account value" as guest %}
                     <td>
-                      {{ order.user|default:guest }}
+                      {{ order.user_email }}
+                      {% if not order.user %}
+                        <span class="label label-danger">{{ guest }}</span>
+                      {% endif %}
                     </td>
                     <td>
                       {{ order.created }}
