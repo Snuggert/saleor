@@ -62,9 +62,9 @@ class OrderFilter(SortedFilterSet):
 
     def filter_by_order_customer(self, queryset, name, value):
         return queryset.filter(
-            Q(user__email__icontains=value) |
-            Q(user__default_billing_address__first_name__icontains=value) |
-            Q(user__default_billing_address__last_name__icontains=value))
+            Q(user_email__icontains=value) |
+            Q(billing_address__first_name__icontains=value) |
+            Q(billing_address__last_name__icontains=value))
 
     def get_summary_message(self):
         counter = self.qs.count()
