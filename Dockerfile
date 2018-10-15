@@ -32,7 +32,6 @@ RUN \
   npm run build-assets --production && \
   npm run build-emails --production
 
-
 ### Final image
 FROM tiangolo/uwsgi-nginx:python3.6
 ENV PYTHONUNBUFFERED 1
