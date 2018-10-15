@@ -15,7 +15,7 @@ a.btn {
     text-transform: uppercase;
     font-size: $h3-font-size;
     color: $white;
-    background-color: transparent;
+    background: rgba(black, 0.1);;
     border: 1px solid $white;
     padding: $global-padding $global-padding * 2;
     &:hover {
