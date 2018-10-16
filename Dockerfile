@@ -29,7 +29,6 @@ ADD ./saleor/static /app/saleor/static/
 ADD ./templates /app/templates/
 RUN \
   STATIC_URL=${STATIC_URL} \
-  npm run build-assets --production && \
   npm run build-emails --production
 
 ### Final image
@@ -46,10 +45,9 @@ RUN \
   rm -rf /var/lib/apt/lists/*
 
 ADD . /app
+ADD ./saleor/static /app/saleor/static/
 COPY --from=build-python /usr/local/lib/python3.6/site-packages/ /usr/local/lib/python3.6/site-packages/
 COPY --from=build-python /usr/local/bin/ /usr/local/bin/
-COPY --from=build-nodejs /app/saleor/static /app/saleor/static
-COPY --from=build-nodejs /app/webpack-bundle.json /app/
 COPY --from=build-nodejs /app/templates /app/templates
 WORKDIR /app
 
